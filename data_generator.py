@@ -4,6 +4,9 @@ from collections import defaultdict
 from itertools import product
 import random
 import math
+from flask import Flask
+
+
 
 def new_lmh_count():
     res = {}
@@ -14,7 +17,7 @@ def new_lmh_count():
 class NameGenerator:
     def __init__(self):
         self.all_names = []
-        self.all_syllables = []
+        # self.all_syllables = []
         self.syl_count = defaultdict(int)
         self.syl_position_count = {0: defaultdict(int), 1: defaultdict(int), 2: defaultdict(int), 3: defaultdict(int), 4: defaultdict(int)}
         self.syl_position_usage_counts = {0: new_lmh_count(), 1: new_lmh_count(), 2: new_lmh_count(), 3: new_lmh_count(), 4: new_lmh_count()}
@@ -26,13 +29,13 @@ class NameGenerator:
             for row in reader:
                 self.all_names.append(row[0])
                 syllables = [x.lower() for x in row[1].split('-')]
-                self.all_syllables.extend(syllables)
+                # self.all_syllables.extend(syllables)
                 for i, syl in enumerate(syllables):
                     self.syl_count[syl] += 1
                     self.syl_position_count[i][syl] += 1
-                    if i > 0:
-                        self.subsequent_list[syllables[i-1]].append(syl)
-        self.all_syllables = list(set(self.all_syllables))
+                    # if i > 0:
+                    #     self.subsequent_list[syllables[i-1]].append(syl)
+        # self.all_syllables = list(set(self.all_syllables))
         # print(self.subsequent_list)
 
     def find_freq_count(self, syl):
@@ -56,9 +59,9 @@ class NameGenerator:
         self.syl_count_middle = dict(sorted(self.syl_count.items(), key=lambda item: item[1], reverse=True)[first_third:first_third*2])
         self.syl_count_low = dict(sorted(self.syl_count.items(), key=lambda item: item[1], reverse=True)[first_third*2:])
 
-        print('a', self.syl_count_high)
-        print('b', self.syl_count_middle)
-        print('c', self.syl_count_low)
+        # print('a', self.syl_count_high)
+        # print('b', self.syl_count_middle)
+        # print('c', self.syl_count_low)
 
         for position, entries in self.syl_position_count.items():
             # ie position is 0 and combo is lh, meaning it's a first syllable and it has
@@ -67,10 +70,10 @@ class NameGenerator:
                 combo, combo_count = self.find_freq_count(syl)
                 self.syl_position_usage_counts[position][combo][syl] += combo_count
 
-        for i, v in self.syl_position_usage_counts.items():
-            print(i)
-            for k, vv in v.items():
-                print(k ,vv)
+        # for i, v in self.syl_position_usage_counts.items():
+        #     print(i)
+        #     for k, vv in v.items():
+        #         print(k ,vv)
 
     def choose_per_deviation(self, choices, deviation):
         first_third = len(choices) // 3
@@ -90,11 +93,10 @@ class NameGenerator:
         top_frequency_high_count = strength + honesty
         top_frequency_middle_count = compassion
         top_frequency_low_count = intelligence + speed
-        syllable_1_count = strength + speed
-        syllable_2_count = strength + speed + compassion
-        syllable_3_count = math.floor(intelligence/1.5 + honesty)
-        syllable_4_count = math.floor(intelligence + compassion/1.8)
-        syllable_5_count = math.floor(intelligence + honesty/2)
+        syllable_2_count = strength + speed
+        syllable_3_count = strength + speed + compassion
+        syllable_4_count = math.floor(intelligence/1.1 + honesty)
+        syllable_5_count = math.floor(intelligence + compassion/1.8)
         deviation_high_count = intelligence
         deviation_middle_count = honesty + compassion
         deviation_low_count = strength + speed
@@ -116,15 +118,15 @@ class NameGenerator:
         else:
             total_top_frequency = 'h'
 
-        syllable_total_count = syllable_1_count + syllable_2_count + syllable_3_count + syllable_4_count + syllable_5_count
+        syllable_total_count = syllable_2_count + syllable_3_count + syllable_4_count + syllable_5_count
         random_syllable = random.randint(1, syllable_total_count)
-        if random_syllable < syllable_1_count:
-            num_syllables = 1
-        elif random_syllable < syllable_1_count + syllable_2_count:
+        if random_syllable < syllable_2_count:
             num_syllables = 2
-        elif random_syllable < syllable_1_count + syllable_2_count + syllable_3_count:
+        elif random_syllable < syllable_2_count + syllable_3_count:
+            num_syllables = 2
+        elif random_syllable < syllable_2_count + syllable_3_count + syllable_4_count:
             num_syllables = 3
-        elif random_syllable < syllable_1_count + syllable_2_count + syllable_3_count + syllable_4_count:
+        elif random_syllable < syllable_2_count + syllable_3_count + syllable_4_count + syllable_5_count:
             num_syllables = 4
         else:
             num_syllables = 4
@@ -155,9 +157,19 @@ class NameGenerator:
                 sorted_syl_choice = dict(sorted(syl_choice.items(), key=lambda item: item[1], reverse=True))
                 syl = self.choose_per_deviation(list(sorted_syl_choice.keys()), params['deviation'])
             name.append(syl)
-        print('-'.join(name))
+        name = ''.join(name)
+        return name.capitalize()
 
-p = NameGenerator()
-p.parse()
-p.parse_counts()
-p.generate_name(4, 2, 3, 4, 2)
+
+app = Flask(__name__)
+
+@app.route("/api/generate_name/<int:intelligence>/<int:strength>/<int:speed>/<int:honesty>/<int:compassion>")
+def run(intelligence, strength, speed, honesty, compassion):
+    p = NameGenerator()
+    p.parse()
+    p.parse_counts()
+    return p.generate_name(intelligence, strength, speed, honesty, compassion)
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
