@@ -5,7 +5,9 @@ from itertools import product
 import random
 import math
 from flask import Flask
+import flask
 
+from flask_cors import CORS, cross_origin
 
 
 def new_lmh_count():
@@ -162,14 +164,20 @@ class NameGenerator:
 
 
 app = Flask(__name__)
+CORS(app,)
+p = NameGenerator()
+p.parse()
+p.parse_counts()
+
 
 @app.route("/api/generate_name/<int:intelligence>/<int:strength>/<int:speed>/<int:honesty>/<int:compassion>")
+@cross_origin()
 def run(intelligence, strength, speed, honesty, compassion):
-    p = NameGenerator()
-    p.parse()
-    p.parse_counts()
-    return p.generate_name(intelligence, strength, speed, honesty, compassion)
+    name = p.generate_name(intelligence, strength, speed, honesty, compassion)
+    response = flask.jsonify({'name': name})
+    # response.headers.add('Access-Control-Allow-Origin', '127.0.0.1:3000')
+    return response
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="127.0.0.1",debug=True)
